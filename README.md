@@ -2,134 +2,176 @@
 
 [![Java Version](https://img.shields.io/badge/Java-17%2B-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
 [![JavaFX](https://img.shields.io/badge/JavaFX-21.0.5-orange.svg)](https://openjfx.io/)
-[![Database](https://img.shields.io/badge/SQLite-3.46.1.0-lightgrey.svg)](https://sqlite.org/)
+[![Database Encryption](https://img.shields.io/badge/Database%20Encryption-SQLCipher%20256--bit-brightgreen.svg)](https://github.com/willena/sqlite-jdbc-crypt)
+[![Record Encryption](https://img.shields.io/badge/Record%20Encryption-AES--256--GCM-teal.svg)](https://docs.oracle.com/en/java/javase/17/security/java-cryptography-architecture-jca-reference-guide.html)
 [![Build Tool](https://img.shields.io/badge/Maven-3.x-red.svg)](https://maven.apache.org/)
-[![Tests](https://img.shields.io/badge/Tests-94%20Passed-brightgreen.svg)]()
-[![Repository](https://img.shields.io/badge/GitHub-jeedijoshua--art%2Foopsmp-blue.svg)](https://github.com/jeedijoshua-art/oopsmp)
+[![Tests](https://img.shields.io/badge/Tests-119%20Passed-brightgreen.svg)]()
+[![Repository](https://img.shields.io/badge/GitHub-RoshanAnandSeeli%2FVaultLedger-blue.svg)](https://github.com/RoshanAnandSeeli/VaultLedger)
 
-> **Academic Notice:** **VaultLedger** is an academic desktop banking simulation engineered to demonstrate core banking principles, double-entry bookkeeping, strict account lifecycle states, atomic transactions, and thread-safe concurrency controls. It is designed strictly for educational and evaluation purposes and is not intended for production banking deployments or real customer funds.
+> **Academic Notice:** **VaultLedger** is an academic desktop banking simulation engineered to demonstrate core banking principles, double-entry bookkeeping, strict account lifecycle states, atomic transactions, thread-safe concurrency controls, and defense-in-depth dual-layer cryptographic security. It is designed strictly for educational and evaluation purposes and is not intended for production banking deployments or real customer funds.
 
-**Official Repository:** [https://github.com/jeedijoshua-art/oopsmp](https://github.com/jeedijoshua-art/oopsmp)
+**Official Repository:** [https://github.com/RoshanAnandSeeli/VaultLedger](https://github.com/RoshanAnandSeeli/VaultLedger)
 
 ---
 
 ## Table of Contents
 
 1. [Project Overview](#1-project-overview)
-2. [Features](#2-features)
-3. [Technology Stack](#3-technology-stack)
-4. [Project Architecture](#4-project-architecture)
-5. [Prerequisites](#5-prerequisites)
-6. [Clone and Run on macOS](#6-clone-and-run-on-macos)
+2. [Key Differentiators & Security Architecture](#2-key-differentiators--security-architecture)
+3. [Features](#3-features)
+4. [Technology Stack](#4-technology-stack)
+5. [Project Architecture](#5-project-architecture)
+6. [Prerequisites](#6-prerequisites)
 7. [Clone and Run on Windows](#7-clone-and-run-on-windows)
-8. [First Launch and Demo Data](#8-first-launch-and-demo-data)
-9. [Complete UI User Guide](#9-complete-ui-user-guide)
-10. [Demonstration Scenarios](#10-demonstration-scenarios)
-11. [Testing](#11-testing)
-12. [Troubleshooting](#12-troubleshooting)
-13. [GitHub Repository & Contribution Workflow](#13-github-repository--contribution-workflow)
-14. [Academic Disclaimer](#14-academic-disclaimer)
+8. [Clone and Run on macOS / Linux](#8-clone-and-run-on-macos--linux)
+9. [First Launch, Master Key Setup & Demo Data](#9-first-launch-master-key-setup--demo-data)
+10. [Complete UI User Guide](#10-complete-ui-user-guide)
+11. [Demonstration Scenarios](#11-demonstration-scenarios)
+12. [Testing & Verification](#12-testing--verification)
+13. [Troubleshooting](#13-troubleshooting)
+14. [GitHub Repository & Contribution Workflow](#14-github-repository--contribution-workflow)
+15. [Academic Disclaimer](#15-academic-disclaimer)
 
 ---
 
 ## 1. Project Overview
 
-**VaultLedger** is a core banking desktop simulation application developed in **Java 17**, **JavaFX 21**, and **SQLite 3**. It models how modern financial institutions manage account lifecycles, enforce relational integrity, execute atomic ACID transactions, and maintain an immutable, balanced double-entry accounting ledger.
+**VaultLedger** is an enterprise-grade core banking desktop simulation application developed in **Java 17**, **JavaFX 21**, and **SQLite 3 with SQLCipher encryption**. It models how modern financial institutions manage account lifecycles, enforce relational integrity, execute atomic ACID transactions, maintain an immutable balanced double-entry accounting ledger, and secure sensitive financial records at rest using a multi-tier defense-in-depth cryptographic model.
 
 The application allows students, evaluators, and developers to observe how transactions move through the system:
 - From the **JavaFX presentation tier**,
+- Through the **Master Password Authentication & Unlock barrier**,
 - Across the **Service validation tier**,
-- Through the **AccountLockManager concurrency coordinator**,
-- Into the **JDBC persistence tier**,
-- And finally onto an immutable, self-auditing **double-entry general ledger**.
+- Coordinated by the **AccountLockManager thread-safe concurrency engine**,
+- Encrypted by the **Application-level Record Encryption Service (AES-256-GCM)**,
+- Persisted through the **JDBC DAO tier into an AES-256 SQLCipher encrypted database**,
+- And finally audited on an immutable **double-entry general ledger**.
 
 ---
 
-## 2. Features
+## 2. Key Differentiators & Security Architecture
 
-Every feature listed below is verified and implemented in the application source code:
+Unlike conventional banking CRUD coursework, VaultLedger incorporates professional banking and security patterns:
 
+### 1. Dual-Layer Defense-in-Depth Cryptography
+* **Layer 1 — Whole-Database Encryption at Rest:**
+  * Uses `io.github.willena:sqlite-jdbc:3.50.1.0` (SQLite3MultipleCiphers / SQLCipher compatible).
+  * Every page of the SQLite database file (`data/core-banking.db`) is encrypted on disk using a 256-bit key ($K_{db}$).
+  * Standard SQLite viewers and tools cannot read, parse, or identify the file without authentication.
+* **Layer 2 — Application-Level Record Encryption (`AES-256-GCM`):**
+  * Implemented via [`RecordEncryptionService`](src/main/java/com/corebanking/security/RecordEncryptionService.java).
+  * Sensitive customer fields (`customer_name`, `age`, `email`, `phone_number`) and transaction descriptions are encrypted in memory before reaching SQLite.
+  * Uses a fresh, cryptographically secure 12-byte random nonce per operation, producing ciphertext format `enc:v1:<Base64([12-byte IV][Ciphertext + 16-byte Tag])>`.
+  * Authenticated decryption rejects bit-flipping, truncation, or payload tampering safely with exceptions.
+  * Transparent in-memory search enables searching decrypted records in Java without leaking frequency patterns via SQL LIKE queries.
+
+### 2. Zero-Knowledge Dual-Key Lifecycle Management
+* Implemented in [`VaultKeyManager`](src/main/java/com/corebanking/security/VaultKeyManager.java).
+* Derives two independent 256-bit keys ($K_{db}$ and $K_{record}$) using `SecureRandom`.
+* Both keys are independently wrapped using the user's master password via **PBKDF2-HMAC-SHA-256 (100,000 iterations)** with distinct random 16-byte salts and distinct 12-byte GCM nonces.
+* Stored in `vault-key.meta` version 2 metadata. Contains **no plaintext passwords and no unwrapped keys**.
+* Unwrapped keys and password character arrays are zeroized from memory immediately after authentication or upon logout.
+
+### 3. Deadlock-Aware Account Locking
+* Implemented in [`AccountLockManager`](src/main/java/com/corebanking/transaction/AccountLockManager.java).
+* Inter-account transfers acquire `ReentrantLock` instances using strict lexicographical ID ordering.
+* Completely eliminates race conditions and circular lock wait conditions regardless of transfer concurrency or direction.
+
+### 4. Atomic Database Transactions with Double-Entry Ledger Validation
+* Balances, transaction logs, and dual debit/credit ledger records execute inside atomic JDBC transactions.
+* If a balance update fails, an overdraft occurs, or ledger entries do not balance, the entire database transaction rolls back, leaving no orphan records.
+
+### 5. Automated Protected Backups
+* Implemented in [`DatabaseMigrator`](src/main/java/com/corebanking/security/DatabaseMigrator.java).
+* Retained database backups (`*.backup.*`) are verified encrypted copies at rest.
+* Ephemeral plaintext migration safety files are purged immediately upon migration success, leaving zero plaintext data on disk.
+* Intelligent pre-flight checks prevent redundant backup creation on subsequent application launches when no migration is required.
+
+---
+
+## 3. Features
+
+* **Master Password Unlock & Setup:** Dedicated presentation screen enforcing credential verification before opening the database connection.
 * **Executive Dashboard & Real-Time Metrics:** Live metric cards summarizing Total Accounts, Active Accounts, Visible Banks, Aggregate Customer Balance, and recent financial activity.
-* **Customer Onboarding & Account Creation:** Account registration form with client-side and domain validation:
-  - Account ID (alphanumeric, auto-generated or custom).
-  - Customer full name.
-  - Age restriction (18 to 120 years).
-  - Optional contact fields (valid email format, 10-digit phone number).
-  - Bank affiliation and account classification (`SAVINGS` or `CURRENT`).
-  - Non-negative initial deposit.
-* **Strict Account Lifecycle Management:** Formal three-state machine:
+* **Customer Onboarding & Account Registration:** Validated form enforcing account ID generation, name, age restrictions (18–120), valid email format, 10–15 digit phone format, bank affiliation, and account type (`SAVINGS` or `CURRENT`).
+* **Strict Three-State Account Lifecycle:**
   - **`ACTIVE`:** Eligible for deposits, withdrawals, and transfers.
   - **`INACTIVE`:** Dormant state; financial transactions are blocked; can be reactivated.
   - **`CLOSED`:** Terminal state; requires zero balance; cannot be reopened; eligible for permanent deletion.
-* **Atomic Deposit Operations:** Credit money into active accounts backed by the system cash pool (`SYSTEM-CASH`).
-* **Protected Withdrawal Operations:** Debit funds from active accounts with strict overdraft prevention and live before/after calculation preview.
-* **Multi-Account Transfers with Deadlock Prevention:** Inter-account transfers coordinated by an ordered `ReentrantLock` manager that eliminates locking race conditions regardless of transfer direction.
-* **Audit Transaction Receipts:** Immediate modal receipt for every completed transaction displaying Transaction ID, Timestamp, Type, From/To Accounts, Amount, Status, and Description.
-* **Double-Entry General Ledger:** Relational ledger capturing matched `DEBIT` and `CREDIT` entries for every movement of capital. Features automated mathematical balance checks displayed with a prominent `BALANCED` audit badge.
-* **Searchable Historical Activity:** Searchable transaction history with real-time text query and dropdown filtering by `TransactionType` and `TransactionStatus`.
-* **Zero-Configuration SQLite Persistence:** Automated schema initialization, schema migration, index creation, and foreign key cascades stored in a local SQLite file (`data/core-banking.db`).
-* **Idempotent Demo Data Seeding:** One-click seeding of sample bank and accounts with realistic initial transactions.
-* **Granular Database Maintenance:** Ability to safely purge only demo-tagged records or wipe the entire workspace with confirmation guards.
-* **In-App GitHub Repository Link:** Direct one-click access to the project repository on GitHub via desktop browser integration.
+* **Atomic Cash Operations:** Deposits backed by the system cash pool (`SYSTEM-CASH`) and withdrawals with overdraft prevention.
+* **Inter-Account Transfers:** Coordinated dual-account movements with live calculation previews and deadlock prevention.
+* **Audit Transaction Receipts:** Immediate modal receipt for every completed transaction displaying Transaction ID, Timestamp, Type, Accounts, Amount, Status, and Description.
+* **Double-Entry General Ledger:** Relational ledger capturing matched `DEBIT` and `CREDIT` entries with mathematical balance verification displayed via a `BALANCED` badge.
+* **Searchable Historical Activity:** Search and dropdown filtering across accounts, transactions, and ledger history.
+* **Granular Database Maintenance:** Ability to reset demo data or wipe the workspace with confirmation guards.
+* **Session Logout / Vault Lock:** Closes active database connections and wipes active encryption keys from memory, returning to the lock screen.
 
 ---
 
-## 3. Technology Stack
+## 4. Technology Stack
 
 | Layer | Component | Version / Specification | Details |
 | :--- | :--- | :--- | :--- |
-| **Language** | Java (JDK) | 17 LTS | Modern LTS Java syntax (records, pattern matching, sealed types) |
-| **GUI Framework** | OpenJFX (JavaFX) | 21.0.5 | Native desktop UI, Controls, Layouts, FXML, Stage/Scene architecture |
-| **Database** | SQLite | 3.46.1.0 | Embedded relational engine via `org.xerial:sqlite-jdbc` |
-| **Build System** | Apache Maven | 3.8+ | Dependency management, build lifecycle, JavaFX Maven plugin |
-| **Testing** | JUnit Jupiter | 5.11.0 | Unit, integration, concurrency, and UI test suite (94 tests) |
+| **Language** | Java (JDK) | 17 LTS / 21+ / 24 | Modern Java syntax (records, pattern matching, sealed types) |
+| **GUI Framework** | OpenJFX (JavaFX) | 21.0.5 | Native desktop UI, Controls, Layouts, CSS styling |
+| **Encrypted Database** | SQLite (SQLCipher) | 3.50.1.0 | `io.github.willena:sqlite-jdbc` with SQLite3MultipleCiphers AES-256 |
+| **Record Encryption** | Java JCA | AES-256-GCM | 256-bit AES key, 12-byte random nonce per op, authenticated tag |
+| **Key Derivation** | PBKDF2 | HMAC-SHA-256 | 100,000 iterations with distinct 16-byte random salts |
+| **Build System** | Apache Maven | 3.8+ / 3.9.9 | Dependency management, build lifecycle, JavaFX Maven plugin |
+| **Testing** | JUnit Jupiter | 5.11.0 | Unit, integration, concurrency, and security test suite (**119 tests**) |
 | **Concurrency** | Java Concurrency | `java.util.concurrent` | `ReentrantLock` striping and lexicographical ordering |
-| **Styling** | JavaFX CSS | Custom 3.0 Design | VaultLedger Navy (`#0A1728`), Teal (`#009C9C`), and High-Contrast Light (`#FFFFFF`) |
+| **Styling** | JavaFX CSS | Custom 3.0 Design | VaultLedger Navy (`#0A1728`), Teal (`#009C9C`), and Clean Light (`#FFFFFF`) |
 
 ---
 
-## 4. Project Architecture
-
-VaultLedger follows an enterprise four-tier layered architecture:
+## 5. Project Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    JavaFX Presentation Layer                │
-│       AppShell, DialogWindow, AlertUtil, FormatUtil         │
+│                    JavaFX Presentation Tier                 │
+│         LoginView, AppShell, DialogWindow, AlertUtil        │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│                      Service Logic Layer                    │
-│   AccountService, TransactionService, LedgerService,        │
-│   BankService, DatabaseManagementService                    │
-│   ┌─────────────────────────────────────────────────────┐   │
-│   │   AccountLockManager (Deadlock-Free Locking)        │   │
-│   └─────────────────────────────────────────────────────┘   │
+│                    Security & Lifecycle Tier                │
+│    VaultKeyManager (PBKDF2/GCM), RecordEncryptionService,   │
+│                 DatabaseMigrator (Encrypted Backup)         │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│                    Repository Access Layer                  │
-│   AccountRepository, TransactionRepository,                 │
-│   LedgerRepository, BankRepository                          │
+│                      Service Logic Tier                     │
+│    AccountService, TransactionService, LedgerService,       │
+│    BankService, DatabaseManagementService                   │
+│    ┌───────────────────────────────────────────────────┐    │
+│    │    AccountLockManager (Deadlock-Free Locking)     │    │
+│    └───────────────────────────────────────────────────┘    │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│                 Embedded Relational Database                │
-│                 SQLite 3 (data/core-banking.db)             │
+│                    Repository Access Tier                   │
+│    AccountRepository, TransactionRepository,               │
+│    LedgerRepository, BankRepository                         │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│                Whole-Database Encrypted Storage             │
+│            SQLite3MultipleCiphers (data/core-banking.db)    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Directory Structure
 
 ```text
-oopsmp/
-├── data/                                 # Auto-created SQLite database directory (git-ignored)
-│   └── core-banking.db                   # Local SQLite database file
+VaultLedger/
+├── data/                                 # Runtime encrypted database directory (git-ignored)
+│   ├── core-banking.db                   # SQLCipher AES-256 encrypted database file
+│   └── vault-key.meta                    # Cryptographic envelope metadata (no plaintext secrets)
 ├── src/
 │   ├── main/
 │   │   ├── java/com/corebanking/
 │   │   │   ├── config/                   # DB connection, transactions, seeder, initializer
 │   │   │   │   ├── AppConfig.java
+│   │   │   │   ├── DatabaseConfig.java
 │   │   │   │   ├── DatabaseConnection.java
 │   │   │   │   ├── DatabaseInitializer.java
 │   │   │   │   ├── DatabaseTransaction.java
@@ -137,395 +179,201 @@ oopsmp/
 │   │   │   ├── enums/                    # AccountType, AccountStatus, TransactionType, LedgerEntryType
 │   │   │   ├── exception/                # Domain banking exceptions (InsufficientFunds, etc.)
 │   │   │   ├── model/                    # Immutable domain models (Account, Bank, Transaction, LedgerEntry)
-│   │   │   ├── repository/               # JDBC DAOs with PreparedStatement mapping
+│   │   │   ├── repository/               # JDBC DAOs with transparent field encryption/decryption
+│   │   │   ├── security/                 # Dual-layer encryption engine
+│   │   │   │   ├── DatabaseMigrator.java         # Safe encrypted migration & backup
+│   │   │   │   ├── RecordEncryptionService.java  # AES-256-GCM record cipher
+│   │   │   │   └── VaultKeyManager.java          # Dual-key derivation & unwrapping
 │   │   │   ├── service/                  # Business services and interfaces
 │   │   │   ├── transaction/              # AccountLockManager for lock ordering
-│   │   │   ├── ui/                       # Presentation tier (AppShell)
+│   │   │   ├── ui/                       # Presentation tier (LoginView, AppShell)
 │   │   │   │   └── util/                 # AlertUtil, FormatUtil
 │   │   │   └── Main.java                 # Desktop application entry point
 │   │   └── resources/
-│   │       ├── css/
-│   │       │   └── application.css       # High-contrast VaultLedger banking theme
-│   │       └── database/
-│   │           └── schema.sql            # Relational database table definitions and indices
-│   └── test/java/com/corebanking/        # 94 automated unit, integration, & UI tests
+│   │       ├── css/application.css       # VaultLedger professional banking styling
+│   │       └── database/schema.sql       # Relational database schema & indexes
+│   └── test/java/com/corebanking/        # 119 automated unit, integration, & security tests
+│       ├── security/
+│       │   ├── DatabaseEncryptionTest.java # 14 database encryption tests
+│       │   └── RecordEncryptionTest.java   # 11 record encryption tests
+│       └── ...                           # Domain, Service, Concurrency, and UI tests
 ├── pom.xml                               # Maven project definition
+├── run.bat                               # Windows launcher with Java & Maven auto-detection
 ├── userinst.md                           # Extended user manual and demonstration script
 └── README.md                             # Project documentation (this file)
 ```
 
 ---
 
-## 5. Prerequisites
+## 6. Prerequisites
 
-Before installing, ensure that your system has:
-
+Ensure your system has:
 1. **Java Development Kit (JDK) 17 or higher** installed.
-2. **Apache Maven 3.8 or higher** installed.
+2. **Apache Maven 3.8+** installed.
 3. **Git** installed.
-
-### Verify Prerequisites
-
-Open a terminal or command prompt and verify:
-
-```bash
-java -version
-mvn -version
-git --version
-```
-
-*Expected output: Java version `17.x` or higher, Maven `3.8.x` or higher.*
-
----
-
-## 6. Clone and Run on macOS
-
-### Step 1: Open Terminal and Clone the Repository
-
-```bash
-git clone https://github.com/jeedijoshua-art/oopsmp.git
-cd oopsmp
-```
-
-### Step 2: Verify Java 17 and Maven
-
-```bash
-java -version
-mvn -version
-```
-
-*(If Java 17 is missing on macOS, install it via Homebrew: `brew install openjdk@17 maven`)*
-
-### Step 3: Compile and Launch the Application
-
-```bash
-mvn clean compile
-mvn javafx:run
-```
-
-The desktop application window titled **"VaultLedger — Core Banking Account Lifecycle & Ledger System"** will launch automatically.
-
-### Step 4: Run the Test Suite
-
-```bash
-mvn test
-```
 
 ---
 
 ## 7. Clone and Run on Windows
 
-### Step 1: Open PowerShell or Command Prompt
-
-Clone the repository into your desired workspace folder:
-
+### Step 1: Clone Repository
 ```powershell
-git clone https://github.com/jeedijoshua-art/oopsmp.git
-cd oopsmp
+git clone https://github.com/RoshanAnandSeeli/VaultLedger.git
+cd VaultLedger
 ```
 
-### Step 2: Verify Java 17 and Maven on Windows
+### Step 2: Launch Application
+You can use the automated launcher script [`run.bat`](run.bat), which automatically detects installed JDKs (`jdk-24`, `jdk-21`, `jdk-17`) and Maven:
 
-Ensure `JAVA_HOME` is configured in your System Environment Variables and both `java` and `mvn` are on your PATH:
-
-```powershell
-java -version
-mvn -version
+```cmd
+run.bat
 ```
 
-*(If missing on Windows, install via winget: `winget install EclipseAdoptium.Temurin.17.JDK` and `winget install Apache.Maven`)*
-
-### Step 3: Launch the Application
-
+Or via Maven directly:
 ```powershell
 mvn clean compile
 mvn javafx:run
 ```
 
-### Step 4: Run Automated Tests
+### Step 3: Run the Test Suite
+```cmd
+run.bat test
+```
+*(or `mvn test`)*
 
-```powershell
+---
+
+## 8. Clone and Run on macOS / Linux
+
+### Step 1: Clone Repository
+```bash
+git clone https://github.com/RoshanAnandSeeli/VaultLedger.git
+cd VaultLedger
+```
+
+### Step 2: Compile & Run
+```bash
+mvn clean compile
+mvn javafx:run
+```
+
+### Step 3: Run Tests
+```bash
 mvn test
 ```
 
 ---
 
-## 8. First Launch and Demo Data
+## 9. First Launch, Master Key Setup & Demo Data
 
-### Initial State
-On first launch, if no database exists, VaultLedger automatically creates `data/core-banking.db` and applies the schema from `schema.sql`. The system cash pool (`SYSTEM-CASH`) and system bank (`SYSTEM`) are provisioned automatically.
+### 1. Master Key Initialization
+On first launch, VaultLedger presents the **Master Security Key Setup** screen:
+1. Enter a secure master password (minimum 8 characters).
+2. Confirm the master password.
+3. Click **Initialize & Encrypt Vault**.
+4. The system cryptographically derives independent 256-bit database and record keys, wraps them using PBKDF2-HMAC-SHA-256 (100,000 iterations), creates `data/vault-key.meta`, and provisions the encrypted database `data/core-banking.db`.
 
-The initial dashboard displays:
-- **Total Accounts:** `0`
-- **Active Accounts:** `0`
-- **Total Customer Balance:** `₹0.00`
-- **Visible Banks:** `0`
-- An empty transaction table prompting: *"Your deposits, withdrawals, and transfers will appear here."*
+### 2. Unlocking on Subsequent Launches
+On subsequent launches, enter your master password to unlock and decrypt the vault. If an incorrect password is entered, access is rejected without opening or altering the database.
 
-### Loading Demo Data
-To immediately explore the system with realistic data:
-1. Navigate to the **Dashboard**.
-2. In the **Quick Actions** panel, click **`Load Demo Data`**.
-3. A confirmation notification will appear: *"Demo Data Loaded: Sample bank, accounts, and transactions were created."*
-
-### Verified Demo Records Created
-The seeder (`DemoDataSeeder.java`) creates:
-* **Bank:** Northstar Bank (Code: `NSB`)
-* **Customer Accounts:**
-  1. `ACC-JOSHUA` — Customer: **Joshua**, Type: `SAVINGS`, Initial: ₹1,000.00
-  2. `ACC-ROSHAN` — Customer: **Roshan**, Type: `CURRENT`, Initial: ₹500.00
-  3. `ACC-ALICE` — Customer: **Alice**, Type: `SAVINGS`, Initial: ₹250.00
-* **5 Initial Real Transactions:**
-  1. **Deposit** ₹500.00 to `ACC-JOSHUA` (Initial Deposit)
-  2. **Deposit** ₹200.00 to `ACC-ROSHAN` (Initial Deposit)
-  3. **Withdrawal** ₹100.00 from `ACC-JOSHUA` (ATM Withdrawal)
-  4. **Transfer** ₹150.00 from `ACC-JOSHUA` to `ACC-ROSHAN` (Rent payment)
-  5. **Transfer** ₹50.00 from `ACC-ROSHAN` to `ACC-ALICE` (Dinner)
-* **Verified Ending Demo Balances:**
-  - `ACC-JOSHUA`: **₹1,250.00**
-  - `ACC-ROSHAN`: **₹800.00**
-  - `ACC-ALICE`: **₹300.00**
-* **10 Double-Entry General Ledger Entries:** Matched debits and credits totaling ₹1,000.00, fully balanced.
-
-### Idempotence & Data Safety
-- Loading demo data is **strictly idempotent**. It checks whether bank `NSB` already exists before executing. Clicking `Load Demo Data` multiple times will not duplicate accounts or corrupt balances.
-- Demo records are tagged with `is_demo = 1` in the database, allowing granular cleanup without affecting user-created accounts.
+### 3. Loading Demo Data
+Once logged in, click **`Load Demo Data`** on the executive dashboard to populate sample accounts, a bank, and balanced transactions.
 
 ---
 
-## 9. Complete UI User Guide
+## 10. Complete UI User Guide
 
-### 1. Dashboard (`⊞ Dashboard`)
-The primary monitoring overview:
-- **Stat Cards:** Real-time metrics for Total Accounts, Active Accounts, Total Balance, and Visible Banks.
-- **Quick Actions:** Shortcuts for `+ Deposit`, `- Withdraw`, `⇄ Transfer`, `Manage Accounts`, `Load Demo Data`, `Reset Demo Data`, and `Reset Entire Workspace`.
-- **Recent Transactions:** The 8 most recent transactions with live status badges.
-
-### 2. Accounts Overview (`👥 Accounts`)
-A searchable, filterable directory of all customer accounts:
-- **Search Bar:** Real-time search across account IDs and customer names.
-- **Filters:** Dropdowns to filter by `AccountStatus` (`ACTIVE`, `INACTIVE`, `CLOSED`) and `AccountType` (`SAVINGS`, `CURRENT`).
-- **Data Table:** Shows Account ID, Customer Name, Type, Balance, Status, and Bank.
-- **Action Column:** Every row includes a **`View`** button. Clicking **`View`** or double-clicking the row opens **Account Details**.
-
-### 3. Account Details (Lifecycle & Operations Hub)
-The central operational screen for an individual account:
-- **Hero Balance Display:** Prominently displays the current balance in large, high-contrast typography.
-- **Status Badge:** Visual indicator of account status (`ACTIVE` in green, `INACTIVE` in amber, `CLOSED` in red).
-- **Customer Information Card:** Account ID, Customer Name, Age, Email, Phone, Account Type, Bank, and Balance.
-- **Account & Money Operations:**
-  - **`+ Deposit`:** Opens the deposit dialog with this account preselected.
-  - **`- Withdraw`:** Opens the withdrawal dialog with this account preselected.
-  - **`⇄ Transfer`:** Opens the transfer dialog with this account preselected as the source.
-  - **`Activate`:** Reopens an inactive or closed account.
-  - **`Deactivate`:** Freezes an active account to prevent transactions.
-  - **`Close Account`:** Permanently closes an account (requires a ₹0.00 balance).
-  - **`Delete`:** Permanently deletes a closed account with no transaction history.
-- **Recent Account Activity:** Historical transactions specifically involving this account.
-
-### 4. Preferred Transaction Workflow
-To perform any financial operation with maximum clarity and safety:
-1. Open **`👥 Accounts`** from the left sidebar.
-2. Select an account and click **`View`** (or double-click the row) to open **Account Details**.
-3. Choose **`+ Deposit`**, **`- Withdraw`**, or **`⇄ Transfer`**.
-4. The dialog opens with the account preselected:
-   - For **Deposit**: Target account is preselected.
-   - For **Withdraw**: Source account is preselected.
-   - For **Transfer**: Source account is preselected; the destination dropdown dynamically filters to show only *other* active accounts.
-5. Enter the amount. Observe the **Live Calculation Preview** showing before and after balances.
-6. Click Submit.
-7. Review the **Transaction Receipt** displaying full audit details.
-8. Click **Close Receipt** (or dismiss the dialog).
-9. The Account Details page immediately refreshes with the new balance and shows the new transaction in the activity table.
-
-### 5. Transactions History (`⇄ Transactions`)
-Comprehensive, searchable financial ledger:
-- Filter by transaction ID, account ID, or description text.
-- Filter by type (`DEPOSIT`, `WITHDRAWAL`, `TRANSFER`).
-- Filter by status (`SUCCESS`, `FAILED`).
-- Double-click any transaction row to inspect its formal receipt.
-
-### 6. Double-Entry General Ledger (`📒 Ledger`)
-Auditor and compliance screen:
-- Displays individual `DEBIT` and `CREDIT` entries.
-- Summarizes Total Debits vs Total Credits.
-- Features an automated mathematical audit indicator: **`BALANCED`** (when Debits equal Credits) or **`CHECK REQUIRED`** (if mismatched).
+1. **Dashboard (`⊞ Dashboard`):** High-level operational summary cards and quick action buttons.
+2. **Accounts Directory (`👥 Accounts`):** Filter and search customer accounts by name, account ID, email, or phone.
+3. **Account Details:** Inspect balances, view transaction history, and perform operations:
+   - **`+ Deposit`:** Credit funds.
+   - **`- Withdraw`:** Debit funds with live overdraft protection.
+   - **`⇄ Transfer`:** Move funds to another active account with dynamic destination filtering.
+   - **`Activate` / `Deactivate`:** Change lifecycle status.
+   - **`Close Account`:** Available only when balance is exactly ₹0.00.
+4. **Transactions Log (`⇄ Transactions`):** Searchable log with type/status filters and receipt inspection.
+5. **Double-Entry General Ledger (`📒 Ledger`):** Matched debits and credits with an automated mathematical balance verification banner.
+6. **Lock Vault / Logout:** Located in the sidebar footer; securely closes connections, wipes keys from memory, and returns to the lock screen.
 
 ---
 
-## 10. Demonstration Scenarios
+## 11. Demonstration Scenarios
 
-Use these 10 practical scenarios to demonstrate all capabilities during presentations or evaluation sessions:
-
-### Scenario 1: First-Time Setup & Loading Demo Data
-* **Objective:** Initialize the application and load sample records.
-* **Steps:**
-  1. Launch the app (`mvn javafx:run`).
-  2. Click **`Load Demo Data`** on the Dashboard.
-* **Expected Result:** Dashboard metrics immediately update: 3 accounts, 1 bank, and 5 transactions appear in the table.
-
-### Scenario 2: Creating a New Customer Account
-* **Objective:** Onboard a new customer with validation checks.
-* **Steps:**
-  1. Click **`✚ Create Account`** in the sidebar.
-  2. Fill in: Customer Name: `Sarah Connor`, Age: `29`, Email: `sarah@skynet.com`, Phone: `9876543210`, Bank: `Northstar Bank`, Type: `SAVINGS`, Initial Deposit: `500.00`.
-  3. Click **`Create Account`**.
-* **Expected Result:** A success alert appears with the new Account ID. The view redirects to Accounts, listing Sarah Connor with an active status and ₹500.00 balance.
-
-### Scenario 3: Depositing Funds (Streamlined Flow)
-* **Objective:** Deposit funds using the account-first workflow.
-* **Steps:**
-  1. Open **`👥 Accounts`** → click **`View`** on `ACC-JOSHUA` (Balance: ₹1,250.00).
-  2. Click **`+ Deposit`**.
-  3. Notice `ACC-JOSHUA` is preselected. Enter Amount: `250.00`.
-  4. Notice the live preview: `Current: ₹1,250.00 → New Balance: ₹1,500.00`.
-  5. Click **`Deposit`** → Review the receipt → Click **`Close Receipt`**.
-* **Expected Result:** Joshua's balance updates immediately to **₹1,500.00** on the screen.
-
-### Scenario 4: Withdrawing Funds
-* **Objective:** Withdraw money and observe real-time balance deductions.
-* **Steps:**
-  1. In Joshua's account details, click **`- Withdraw`**.
-  2. Enter Amount: `300.00`, Description: `ATM Cash`.
-  3. Notice preview: `Current: ₹1,500.00 → New Balance: ₹1,200.00`.
-  4. Click **`Withdraw`** → Close receipt.
-* **Expected Result:** Joshua's balance updates to **₹1,200.00**.
-
-### Scenario 5: Transferring Funds Between Distinct Accounts
-* **Objective:** Move money between two accounts and verify atomic dual-balance updates.
-* **Steps:**
-  1. In Joshua's account details, click **`⇄ Transfer`**.
-  2. Notice `ACC-JOSHUA` is preselected as the source.
-  3. Open the "To Account" dropdown: notice `ACC-JOSHUA` is **excluded**, displaying only `ACC-ROSHAN`, `ACC-ALICE`, and `Sarah Connor`.
-  4. Select `ACC-ROSHAN` (Roshan). Enter Amount: `200.00`.
-  5. Observe preview: `Joshua: ₹1,000.00 | Roshan: ₹1,000.00`.
-  6. Click **`Transfer`** → Close receipt.
-* **Expected Result:** Joshua's balance is ₹1,000.00. Navigating back to Accounts confirms Roshan's balance increased to ₹1,000.00.
-
-### Scenario 6: Demonstrating Insufficient Funds Validation
-* **Objective:** Verify overdraft protection.
-* **Steps:**
-  1. In Joshua's account details, click **`- Withdraw`**.
-  2. Enter an amount exceeding his balance: `99999.00`.
-  3. Notice the live warning: `Insufficient funds! Balance: ₹1,000.00 | Requested: ₹99,999.00`.
-  4. Click **`Withdraw`**.
-* **Expected Result:** The operation is declined with an error alert: *"Transaction declined: insufficient funds."* No balances change.
-
-### Scenario 7: Account Lifecycle State Management
-* **Objective:** Test deactivation, transaction blocking, and reactivation.
-* **Steps:**
-  1. In an account details page, click **`Deactivate`**. Status changes to `INACTIVE`.
-  2. Notice the `+ Deposit`, `- Withdraw`, and `⇄ Transfer` buttons are automatically disabled.
-  3. Click **`Activate`**. Status changes back to `ACTIVE` and transaction buttons re-enable.
-
-### Scenario 8: Closing an Account (Zero-Balance Rule)
-* **Objective:** Verify that only accounts with a zero balance can be closed.
-* **Steps:**
-  1. Attempt to click **`Close Account`** on an account with funds: the system warns or blocks closure.
-  2. Withdraw the exact remaining balance so the account has ₹0.00.
-  3. Click **`Close Account`** and confirm.
-* **Expected Result:** Status transitions to `CLOSED`.
-
-### Scenario 9: Inspecting the Double-Entry Ledger
-* **Objective:** Audit the accounting integrity of all transactions.
-* **Steps:**
-  1. Click **`📒 Ledger`** in the sidebar.
-  2. Review the list of paired `DEBIT` and `CREDIT` entries.
-  3. Check the audit banner at the top.
-* **Expected Result:** Total Debits strictly equal Total Credits, and the green **`BALANCED`** badge is displayed.
-
-### Scenario 10: Application Restart & SQLite Persistence
-* **Objective:** Confirm data persists across restarts.
-* **Steps:**
-  1. Note current account balances and close the application window.
-  2. Relaunch via `mvn javafx:run`.
-  3. Open Accounts and Ledger.
-* **Expected Result:** All accounts, balances, transactions, and ledger entries remain intact.
+* **Scenario 1:** Set up master password and observe key derivation in `vault-key.meta`.
+* **Scenario 2:** Load demo data and inspect real-time metrics.
+* **Scenario 3:** Onboard a new customer and verify age and contact validations.
+* **Scenario 4:** Perform deposit and withdrawal; verify transaction receipt generation.
+* **Scenario 5:** Transfer funds between accounts; verify simultaneous debit and credit updates.
+* **Scenario 6:** Trigger insufficient funds overdraft protection.
+* **Scenario 7:** Test account deactivation and transaction blocking.
+* **Scenario 8:** Close a zero-balance account and verify lifecycle invariants.
+* **Scenario 9:** Inspect the General Ledger and confirm debits equal credits (`BALANCED`).
+* **Scenario 10:** Close the application, attempt to open `data/core-banking.db` in an ordinary SQLite viewer (confirming it is unreadable), and reopen in VaultLedger with your master password.
 
 ---
 
-## 11. Testing
+## 12. Testing & Verification
 
-VaultLedger includes a suite of automated unit, integration, and UI tests executed via JUnit 5:
+VaultLedger includes an automated test suite executed via JUnit 5:
 
 ```bash
-# Run all tests
 mvn test
-
-# Run a specific test class
-mvn test -Dtest=TransferServiceTest
 ```
 
-### Verified Test Results
+### Test Results
 ```text
-Tests run: 94, Failures: 0, Errors: 0, Skipped: 0
-BUILD SUCCESS
+[INFO] Results:
+[INFO] Tests run: 119, Failures: 0, Errors: 0, Skipped: 0
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
 ```
 
-### What the Tests Cover
-1. **Domain Models (`DomainModelTest`):** Validation of Account, Bank, Transaction, LedgerEntry, MoneyUtil, and `equals`/`hashCode` identity.
-2. **Account Services (`AccountServiceTest`, `AccountManagementTest`):** Account onboarding, age restrictions, email validation, and state machine transitions (`ACTIVE`, `INACTIVE`, `CLOSED`).
-3. **Transaction Services (`TransactionServiceTest`, `TransferServiceTest`):** Deposit calculations, withdrawal limits, overdraft rejection, and atomic transfers.
-4. **Double-Entry Ledger (`LedgerServiceTest`):** Validation of dual debit/credit entries and balanced ledger invariant enforcement.
-5. **Concurrency & Deadlock Prevention (`ConcurrencyIntegrationTest`):** Multi-threaded concurrent deposits and transfers across threads to prove thread safety and absence of deadlocks.
-6. **Data Access Layer (`RepositoryIntegrationTest`, `DatabaseLayerTest`):** SQLite schema creation, foreign key constraints, and JDBC query mapping.
-7. **UI Presentation Tier (`AppShellUITest`, `TransactionDialogTest`):** JavaFX node creation, modal dialogs, account preselection, live calculation previews, and GitHub link verification.
+### Test Coverage Highlights
+* **Whole-Database Encryption (`DatabaseEncryptionTest`, 14 tests):** Password unlocking, invalid credential rejection, page-level confidentiality at rest, restart persistence, migration from plaintext, tamper rejection, rollback on failure, multi-threaded ledger balancing, logout cleanup, and encrypted backup verification.
+* **Record-Level Field Encryption (`RecordEncryptionTest`, 11 tests):** Round-trip encryption/decryption, fresh nonce uniqueness, bit-flip tamper rejection, truncation handling, database column ciphertext inspection (`enc:v1:...`), in-memory search over decrypted data, and memory zeroization.
+* **Concurrency & Deadlock Prevention (`ConcurrencyIntegrationTest`, 6 tests):** Concurrent deposits and bi-directional multi-threaded transfers proving thread safety without deadlocks.
+* **Account Lifecycle & Management (`AccountServiceTest`, `AccountManagementTest`, 21 tests):** State transitions (`ACTIVE`, `INACTIVE`, `CLOSED`), age and contact validation, and account closures.
+* **Double-Entry Ledger (`LedgerServiceTest`, 9 tests):** Dual debit/credit entry verification and mathematical invariant enforcement.
+* **UI & Presentation (`AppShellUITest`, `TransactionDialogTest`, 3 tests):** Dialog components, calculation previews, and receipt generation.
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
-| Issue | Probable Cause | Verified Resolution |
+| Issue | Cause | Solution |
 | :--- | :--- | :--- |
-| **`java: command not found`** | JDK 17 is not installed or not on the system PATH. | Install JDK 17 (Eclipse Temurin or OpenJDK) and ensure `JAVA_HOME/bin` is added to your PATH environment variable. |
-| **`mvn: command not found`** | Apache Maven is not installed or not on PATH. | Install Maven via `brew install maven` (macOS) or `winget install Apache.Maven` (Windows). |
-| **JavaFX runtime components missing** | Running `java com.corebanking.Main` directly without JavaFX modules. | Always launch using Maven: `mvn javafx:run`. Maven resolves JavaFX dependencies automatically. |
-| **Empty tables on initial launch** | Fresh database with no records. | On the Dashboard, click **`Load Demo Data`** under Quick Actions. |
+| **`java: command not found`** | JDK 17+ is not installed or not on PATH. | Install JDK 17 or run [`run.bat`](run.bat) on Windows (auto-detects Java). |
+| **`mvn: command not found`** | Apache Maven is not in PATH. | Install Maven or use [`run.bat`](run.bat), which detects local Maven installations. |
+| **Database cannot be opened in external viewer** | Database is encrypted at rest using SQLCipher. | This is by design. Open and unlock the database using the VaultLedger application. |
+| **Authentication failed on unlock** | Incorrect master password entered. | Enter the password configured during vault setup. |
 | **`Insufficient funds` error** | Withdrawal or transfer exceeds account balance. | Enter an amount less than or equal to the account balance. |
-| **Account dropdown empty during transfer** | System has fewer than two active accounts. | Ensure at least two accounts are created and in the `ACTIVE` state. |
-| **Database corruption or dirty test state** | Partial edits during manual testing. | Click **`Reset Entire Local Workspace`** on the Dashboard (type `RESET ALL DATA` to confirm), or close the app and delete `data/core-banking.db`. It will auto-regenerate on next launch. |
+| **Account dropdown empty during transfer** | Less than two active accounts exist. | Ensure at least two accounts are created and set to `ACTIVE`. |
 
 ---
 
-## 13. GitHub Repository & Contribution Workflow
+## 14. GitHub Repository & Contribution Workflow
 
-**Remote Repository:** [https://github.com/jeedijoshua-art/oopsmp.git](https://github.com/jeedijoshua-art/oopsmp.git)
-
-### Teammate Git Workflow
-
-When contributing changes to the project:
+**Remote Repository:** [https://github.com/RoshanAnandSeeli/VaultLedger.git](https://github.com/RoshanAnandSeeli/VaultLedger.git)
 
 ```bash
-# 1. Ensure you are on main and up to date
-git checkout main
-git pull origin main
+# 1. Clone repository
+git clone https://github.com/RoshanAnandSeeli/VaultLedger.git
 
-# 2. Create a descriptive feature branch
-git checkout -b feature/your-feature-name
-
-# 3. Make changes and verify tests pass
+# 2. Verify build and run all 119 tests
 mvn clean test
 
-# 4. Check status and stage only intended files
-git status
-git add src/main/... src/test/...
-
-# 5. Commit with a meaningful message
-git commit -m "feat: description of feature"
-
-# 6. Push to remote
-git push -u origin feature/your-feature-name
+# 3. Launch the desktop application
+mvn javafx:run
 ```
-
-*Note: For pushing to GitHub, ensure your Git Credential Manager or Personal Access Token (PAT) is configured. Never hardcode credentials into the codebase.*
 
 ---
 
-## 14. Academic Disclaimer
+## 15. Academic Disclaimer
 
 **VaultLedger** is developed solely for educational coursework and academic evaluation. It does not possess financial certifications, PCI-DSS compliance, or integration with real-world banking payment gateways. Do not use this software for processing real financial transactions.
 
 ---
 
 *VaultLedger — Core Banking Account Lifecycle & Ledger System*  
-*Repository: [https://github.com/jeedijoshua-art/oopsmp](https://github.com/jeedijoshua-art/oopsmp)*
+*Repository: [https://github.com/RoshanAnandSeeli/VaultLedger](https://github.com/RoshanAnandSeeli/VaultLedger)*
