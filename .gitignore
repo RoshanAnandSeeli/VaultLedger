@@ -1,0 +1,15 @@
+target/
+.idea/
+*.iml
+.DS_Store
+.vscode/
+
+# Runtime/local database files
+*.db
+*.sqlite
+*.sqlite3
+*.bak
+*.backup.*
+*.tmp
+*.meta
+data/

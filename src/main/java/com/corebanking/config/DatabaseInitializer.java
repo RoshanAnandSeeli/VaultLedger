@@ -1,0 +1,84 @@
+package com.corebanking.config;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+public final class DatabaseInitializer {
+    private DatabaseInitializer() {
+    }
+
+    public static void initialize() throws IOException, SQLException {
+        initialize(AppConfig.databaseFile());
+    }
+
+    public static void initialize(Path databaseFile) throws IOException, SQLException {
+        Files.createDirectories(databaseFile.toAbsolutePath().getParent());
+        try (Connection connection = DatabaseConnection.openConnection(databaseFile)) {
+            initialize(connection);
+        }
+    }
+
+    public static void initialize(Connection connection) throws IOException, SQLException {
+        try (InputStream schemaStream = DatabaseInitializer.class.getResourceAsStream("/database/schema.sql")) {
+            if (schemaStream == null) {
+                throw new IOException("Database schema resource was not found.");
+            }
+
+            String schema = new String(schemaStream.readAllBytes(), StandardCharsets.UTF_8);
+            try (Statement statement = connection.createStatement()) {
+                for (String sqlStatement : schema.split(";")) {
+                    String trimmedStatement = sqlStatement.trim();
+                    if (!trimmedStatement.isEmpty()) {
+                        statement.execute(trimmedStatement);
+                    }
+                }
+            }
+            addLedgerDescriptionColumnIfMissing(connection);
+            addIsDemoColumnIfMissing(connection);
+            addAccountColumnsIfMissing(connection);
+        }
+    }
+
+    private static void addLedgerDescriptionColumnIfMissing(Connection connection) throws SQLException {
+        try (var columns = connection.getMetaData().getColumns(null, null, "ledger_entries", "description")) {
+            if (!columns.next()) {
+                try (var statement = connection.createStatement()) {
+                    statement.execute("ALTER TABLE ledger_entries ADD COLUMN description TEXT");
+                }
+            }
+        }
+    }
+
+    private static void addIsDemoColumnIfMissing(Connection connection) throws SQLException {
+        String[] tables = {"banks", "accounts", "transactions", "ledger_entries"};
+        for (String table : tables) {
+            try (var columns = connection.getMetaData().getColumns(null, null, table, "is_demo")) {
+                if (!columns.next()) {
+                    try (var statement = connection.createStatement()) {
+                        statement.execute("ALTER TABLE " + table + " ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0");
+                    }
+                }
+            }
+        }
+    }
+
+    private static void addAccountColumnsIfMissing(Connection connection) throws SQLException {
+        String[] columnsToAdd = {"age INTEGER", "email TEXT", "phone_number TEXT"};
+        for (String colDef : columnsToAdd) {
+            String colName = colDef.split(" ")[0];
+            try (var columns = connection.getMetaData().getColumns(null, null, "accounts", colName)) {
+                if (!columns.next()) {
+                    try (var statement = connection.createStatement()) {
+                        statement.execute("ALTER TABLE accounts ADD COLUMN " + colDef);
+                    }
+                }
+            }
+        }
+    }
+}
